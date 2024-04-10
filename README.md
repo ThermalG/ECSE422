@@ -1,5 +1,5 @@
 # Network Designer: A good try with an NP problem in graph theory
-**! ONLY FOR GRADING REFERENCE. WON'T BE UPDATED IN THIS REPOSITORY.**
+**! ONLY FOR GRADING REFERENCE. WON'T BE UPDATED IN THIS REPOSITORY.**\
 The program is a collabrative project of ECSE 422 Fault Tolerant Computing, with [Zhanyue](https://github.com/ZhanyueZ) and [Fengqi](https://github.com/fengqiz)
 
 ## How to use:
