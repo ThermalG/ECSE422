@@ -1,8 +1,3 @@
-# TO BE OPTIMIZED
-#    1. upgrade data structures, e.g. numpy, set, tuple
-#    2. exhaustive: multiprocessing
-#    3. efficient: budget check + replacement
-
 import math
 import time
 from itertools import combinations
@@ -10,7 +5,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from Edge import Edge
 
-path = './tester/4_city.txt'
+path = './tester/5_city.txt'
 global NUM_NODE, BUDGET
 
 
@@ -94,15 +89,14 @@ def optimizer(edges):   # @Zhanyue & Alex
         if root_a != root_b:
             parent[root_a] = root_b
             mst.append(e)
-    mst_enhanced = mst.copy()
+    mst_pro = mst.copy()
     e_rest = [e for e in edges if e not in mst]
     cost = sum(e.get_cost() for e in mst)
-    r_max = 0
-    feasible = sum(e.get_cost() for e in mst_enhanced) <= BUDGET
+    r_max = math.prod(e.get_reliability() for e in mst)
     while BUDGET - cost >= min([e.cost for e in e_rest]):
         r_rest, c_rest, ratio, available = [[0] * len(e_rest) for _ in range(4)]
         for i, e in enumerate(e_rest):
-            replica = mst_enhanced.copy() + [e]
+            replica = mst_pro.copy() + [e]
             c_rest[i] = sum(e.get_cost() for e in replica)
             if c_rest[i] > BUDGET:
                 ratio[i] = -1
@@ -114,23 +108,23 @@ def optimizer(edges):   # @Zhanyue & Alex
         r_max = max(r_rest)
         i = ratio.index(max(ratio))
         idx = i if i == r_rest.index(r_max) or available[i] == 1 else r_rest.index(r_max)
-        r_max = max(math.prod(e.get_reliability() for e in mst), r_max)
-        mst_enhanced.append(e_rest[idx])
-        cost = sum(e.get_cost() for e in mst_enhanced)
+        mst_pro.append(e_rest[idx])
+        cost = sum(e.get_cost() for e in mst_pro)
         e_rest.pop(idx)
-    return mst_enhanced, cost, r_max, feasible
+    return mst_pro, cost, r_max, sum(e.get_cost() for e in mst) <= BUDGET
 
 
 def main():  # @Alex
     # 1. REQUIREMENT VALIDATION
     global NUM_NODE, BUDGET
+    rt1, rt2 = 0.0, 0.0
     while True:
         try:
             BUDGET = int(input("Please specify cost limit: "))
             assert BUDGET > 0
             break
         except (ValueError, AssertionError) as err:
-            print("Invalid input: ", err)
+            print("INVALID INPUT: ", err)
 
     # 2. PARSE TESTER TEXT
     edges, matrix_r, matrix_c = [], [], []
@@ -139,35 +133,31 @@ def main():  # @Alex
         try:
             NUM_NODE = int(lines[3].strip())
         except (ValueError, IndexError):
-            raise ValueError("VOID NUMBER OF NODES IN THE PROVIDED FILE.")
+            raise ValueError("VOID NUMBER OF NODES IN PROVIDED FILE.")
         for line in lines[8: 2 * NUM_NODE + 5]:
             if not line.startswith('#') and line.strip():
                 matrix_r.extend(map(float, line.split()))
         for line in lines[- NUM_NODE - 2:]:
             if not line.startswith('#') and line.strip():
                 matrix_c.extend(map(int, line.split()))
-    idx = 0  # <=> i * NUM_NODE - i * (i + 3) // 2 + j - 1
     for i in range(NUM_NODE):
         for j in range(i + 1, NUM_NODE):
             e = Edge(i, j)
-            e.set_reliability(matrix_r[idx])
-            e.set_cost(matrix_c[idx])
+            e.set_reliability(matrix_r.pop(0))
+            e.set_cost(matrix_c.pop(0))
             edges.append(e)
-            idx += 1
     n = len(edges)  # number of distinct city pairs <=> NUM_NODE * (NUM_NODE - 1) // 2
     e_r = sorted(edges, key=lambda x: (x.reliability, -x.cost), reverse=True)
     e_c = sorted(edges, key=lambda x: (x.cost, -x.reliability))
 
     # 3. GUIDED SEARCH @Zhanyue & Alex
     t1 = time.time()
-    *result_r, r_feasible = optimizer(e_r)  # reliability-greedy part
-    *result_c, c_feasible = optimizer(e_c)  # cost-greedy part
+    *mst_r, r_feasible = optimizer(e_r)  # reliability-greedy part
+    *mst_c, c_feasible = optimizer(e_c)  # cost-greedy part
     if r_feasible or c_feasible:
         rt1 = (time.time() - t1) * 1000
-        print(f"Runtime for advanced algo: {rt1:.4f} ms\nNO FURTHER IMPROVEMENTS\n")
-        draw(*result_r if result_r[2] > result_c[2] else result_c)  # choice based on reliability
-    else:
-        raise ValueError("INFEASIBLE CASE. PROGRAM TERMINATED.")
+        print(f"Runtime for advanced algo: {rt1:.4f} ms\n")
+        draw(*mst_r if mst_r[2] > mst_c[2] else mst_c)  # reliability-based choice
 
     # 4. EXHAUSTIVE SEARCH @Fengqi
     t2 = time.time()
@@ -192,7 +182,7 @@ def main():  # @Alex
               else "SIMPLE NETWORK, MACRO PERFORMANCE DISCREPANCY NEGLIGIBLE")
         draw(optima, c_optima, r_optima, 'SIMPLE')
     else:
-        raise ValueError("INFEASIBLE CASE. PROGRAM TERMINATED.")
+        print("INFEASIBLE CASE. PROGRAM TERMINATED.")
 
 
 if __name__ == "__main__":
