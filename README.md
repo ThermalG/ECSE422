@@ -1,14 +1,16 @@
 # Network Designer: A good try with an NP problem in graph theory
-This program is a collabrative project of ECSE 422 Fault Tolerant Computing, with [Zhanyue](https://github.com/ZhanyueZ) and [Fengqi](https://github.com/fengqiz)
+**! ONLY FOR GRADING REFERENCE. WON'T BE UPDATED IN THIS REPOSITORY.**
+The program is a collabrative project of ECSE 422 Fault Tolerant Computing, with [Zhanyue](https://github.com/ZhanyueZ) and [Fengqi](https://github.com/fengqiz)
 
 ## How to use:
-1. Modify `path` attribute in NetworkDesigner.py (individual tester file);
-2. Install dependencies. You can achieve such by running the command below;
+1. Clone repository;
+2. Modify `path` attribute in NetworkDesigner.py (individual tester file);
+3. Install dependencies. You can achieve such by running the command below;
     ```
     pip install -r requirements.txt
     ```
-3. Input the cost limit;
-4. The runtime comparison should be printed and the network designs for each version including cost and 
+4. Input the cost limit;
+5. The runtime comparison should be printed and the network designs for each version including cost and 
    maximum reliability should be plotted.
 
 NOTE though optimized, attempting a tester with large number of cities (8_1.txt for instance) or specifying 
