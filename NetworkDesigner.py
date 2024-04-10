@@ -1,13 +1,7 @@
-"""
-ECSE 422 Graph Theory Project
-AUTHORS @Alex Wei 260981800, Fengqi Zhang 260963858, Zhanyue Zhang 260944809
-
-TO BE OPTIMIZED:
-    1. upgrade data structures, e.g. numpy, set, tuple
-    2. exhaustive: multiprocessing
-    3. efficient: budget check + replacement / early termination
-    4. import networkx for connectivity and mst
-"""
+# TO BE OPTIMIZED
+#    1. upgrade data structures, e.g. numpy, set, tuple
+#    2. exhaustive: multiprocessing
+#    3. efficient: budget check + replacement
 
 import math
 import time
@@ -16,8 +10,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from Edge import Edge
 
-path = './tester/5_city.txt'
-global NUM_NODE
+path = './tester/4_city.txt'
+global NUM_NODE, BUDGET
 
 
 def connected(edges):   # @Alex
@@ -28,18 +22,18 @@ def connected(edges):   # @Alex
             :param g:       adjacency list representation of the graph;
             :param visited: boolean list to record visited nodes.
         """
-        visited[n] = True
+        visited[n] = 1
         for neighbour in g[n]:
             if not visited[neighbour]:
                 dfs(neighbour, g, visited)
 
     graph = [[] for _ in range(NUM_NODE)]
-    is_visited = [False] * NUM_NODE
+    is_visited = [0] * NUM_NODE
     for e in edges:
         graph[e.get_city_a()].append(e.get_city_b())
         graph[e.get_city_b()].append(e.get_city_a())
     dfs(0, graph, is_visited)
-    return all(is_visited)
+    return all(is_visited)  # nx.is_connected(G)
 
 
 # RETURNS RELIABILITY OF THE GRAPH RECURSIVELY
@@ -73,25 +67,25 @@ def draw(edges, c, r, title='ADVANCED'):    # @Fengqi
     x, y = zip(*points)  # separate x & y
     fig, ax = plt.subplots()
     ax.scatter(x, y)
-    for i in edges:
-        idx_a, idx_b = i.get_city_a(), i.get_city_b()
-        ax.plot([x[idx_a], x[idx_b]], [y[idx_a], y[idx_b]], marker='o', color='blue')
-    plt.text(-1, -1, f"Cost {c}, maxR {r:.6f}")
     for i in range(len(labels)):
         ax.text(x[i], y[i], labels[i], fontsize=12)
+    for e in edges:
+        idx_a, idx_b = e.get_city_a(), e.get_city_b()
+        ax.plot([x[idx_a], x[idx_b]], [y[idx_a], y[idx_b]])
+    plt.text(-1, -1, f"Cost {c}, maxR {r:.6f}")
     ax.axis('off')
     ax.set_title(title)
     plt.show()
 
 
-def optimizer(edges, budget):   # @Zhanyue & Alex
+def optimizer(edges):   # @Zhanyue & Alex
     # KRUSKAL'S: MINIMUM SPANNING TREE WITH DISJOINT-SET DATA STRUCTURE
     def find(node):
         if parent[node] != node:
             parent[node] = find(parent[node])
         return parent[node]
 
-    mst = []
+    mst = []    # nx.minimum_spanning_tree(G)
     parent = {i: i for i in range(NUM_NODE)}  # init parent dictionary
     for e in edges:
         if len(mst) == NUM_NODE - 1:
@@ -104,22 +98,22 @@ def optimizer(edges, budget):   # @Zhanyue & Alex
     e_rest = [e for e in edges if e not in mst]
     cost = sum(e.get_cost() for e in mst)
     r_max = 0
-    feasible = sum(e.get_cost() for e in mst_enhanced) <= budget
-    while budget - cost >= min([e.cost for e in e_rest]):
+    feasible = sum(e.get_cost() for e in mst_enhanced) <= BUDGET
+    while BUDGET - cost >= min([e.cost for e in e_rest]):
         r_rest, c_rest, ratio, available = [[0] * len(e_rest) for _ in range(4)]
         for i, e in enumerate(e_rest):
             replica = mst_enhanced.copy() + [e]
             c_rest[i] = sum(e.get_cost() for e in replica)
-            if c_rest[i] > budget:
+            if c_rest[i] > BUDGET:
                 ratio[i] = -1
                 continue
             r_rest[i] = r_g(replica, [])
             ratio[i] = r_rest[i] / c_rest[i]
-            available[i] = 1 if (budget - sum(e.get_cost() for e in replica) >=
-                                 min([e.cost for e in e_rest[:i] + e_rest[i + 1:]])) else 0
+            available[i] = (BUDGET - sum(e.get_cost() for e in replica) >=
+                            min([e.cost for e in e_rest[:i] + e_rest[i + 1:]]))
         r_max = max(r_rest)
-        r = ratio.index(max(ratio))
-        idx = r if r == r_rest.index(r_max) else (r if available[r] == 1 else r_rest.index(r_max))
+        i = ratio.index(max(ratio))
+        idx = i if i == r_rest.index(r_max) or available[i] == 1 else r_rest.index(r_max)
         r_max = max(math.prod(e.get_reliability() for e in mst), r_max)
         mst_enhanced.append(e_rest[idx])
         cost = sum(e.get_cost() for e in mst_enhanced)
@@ -129,17 +123,17 @@ def optimizer(edges, budget):   # @Zhanyue & Alex
 
 def main():  # @Alex
     # 1. REQUIREMENT VALIDATION
+    global NUM_NODE, BUDGET
     while True:
         try:
-            budget = int(input("Please specify cost limit: "))
-            assert budget > 0
+            BUDGET = int(input("Please specify cost limit: "))
+            assert BUDGET > 0
             break
         except (ValueError, AssertionError) as err:
             print("Invalid input: ", err)
 
     # 2. PARSE TESTER TEXT
     edges, matrix_r, matrix_c = [], [], []
-    global NUM_NODE
     with open(path, 'r') as file:
         lines = file.readlines()
         try:
@@ -166,8 +160,8 @@ def main():  # @Alex
 
     # 3. GUIDED SEARCH @Zhanyue & Alex
     t1 = time.time()
-    *result_r, r_feasible = optimizer(e_r, budget)  # reliability-greedy part
-    *result_c, c_feasible = optimizer(e_c, budget)  # cost-greedy part
+    *result_r, r_feasible = optimizer(e_r)  # reliability-greedy part
+    *result_c, c_feasible = optimizer(e_c)  # cost-greedy part
     if r_feasible or c_feasible:
         rt1 = (time.time() - t1) * 1000
         print(f"Runtime for advanced algo: {rt1:.4f} ms\nNO FURTHER IMPROVEMENTS\n")
@@ -180,12 +174,12 @@ def main():  # @Alex
     optima = None
     r_optima, c_optima = 0, 0
     j = 1
-    while j < n and (c_optima := c_optima + e_c[j - 1].cost) <= budget:
+    while j < n and (c_optima := c_optima + e_c[j - 1].cost) <= BUDGET:
         j += 1
-    pbar = tqdm(total=sum(math.comb(n, i) for i in range(NUM_NODE - 1, j)))
-    for k in range(NUM_NODE - 1, j):
-        for comb in combinations(e_c, k):
-            if (c := sum(e.cost for e in comb)) <= budget and connected(comb):
+    pbar = tqdm(total=sum(math.comb(n, k) for k in range(NUM_NODE - 1, j)))
+    for i in range(NUM_NODE - 1, j):
+        for comb in combinations(e_c, i):
+            if (c := sum(e.cost for e in comb)) <= BUDGET and connected(comb):
                 if (r := r_g(comb, [])) > r_optima:
                     r_optima, c_optima = r, c
                     optima = comb

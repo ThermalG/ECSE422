@@ -53,7 +53,7 @@ def main():
     edge7.set_reliability(0.97)
     mst = [edge7, edge2, edge6, edge1, edge3, edge4, edge5]
     pre = []
-    print(NetworkDesigner.r_g(mst, pre, 5, 6))
+    print(NetworkDesigner.r_g(mst, pre))
 
 
 if __name__ == "__main__":
